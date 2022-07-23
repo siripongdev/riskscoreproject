@@ -1,6 +1,6 @@
 from kafka import KafkaConsumer
 from datetime import *
-from functionsUtil import get_risk_score
+from functionsUtil import *
 
 counter = 0
 moving_size50 = 50
@@ -30,7 +30,7 @@ for message in consumer:
         fw.write(x + ",0\r\n")
     else :
         try:
-            print(counter)
+            print("counter = " + str(counter))
 
             #get 50 data point from array
             window = moving_average[counter - moving_size50 : counter]
@@ -48,7 +48,12 @@ for message in consumer:
                     window100 = moving_average[counter - moving_size100 : counter]
                     ma100 = "," + str(round(sum(window100)/moving_size100,2))
 
-            fw.write(x + "," + str(round(sum(window)/moving_size50,2)) + ma100 + "\r\n")
+            #new requirement, to change MA50 to EMA50 ...
+            #fw.write(x + "," + str(round(sum(window)/moving_size50,2)) + ma100 + "\r\n")
+
+            EMA50 = movingAverageExponential(window,0.5,0)
+            fw.write(x + "," + str(EMA50[len(EMA50)-1]) + ma100 + "\r\n")
+
             print(window)
             print(sum(window)/moving_size50)
             print("============")
@@ -57,7 +62,7 @@ for message in consumer:
 
         except:
             error_log = open("../dataset/errorlog.csv","a")
-            error_log.write("data error => " + x)
+            error_log.write("data error => " + x + "\r\n")
             error_log.close()
 
-        counter=counter+1
+    counter=counter+1
