@@ -7,10 +7,8 @@ moving_size50 = 50
 moving_size100 = 100
 moving_average = []
 
-
-
 # To consume latest messages and auto-commit offsets
-consumer = KafkaConsumer('riskscore',
+consumer = KafkaConsumer('riskscore2',
                          group_id='my-group',
                          bootstrap_servers=['localhost:9092'])
 for message in consumer:
@@ -21,7 +19,7 @@ for message in consumer:
                                           message.value))
 
     x = message.value.decode("utf-8")
-
+    data = x.split(",")
     #get risk score
     risk_score = get_risk_score(x)
 
@@ -31,28 +29,35 @@ for message in consumer:
     if counter < moving_size50 :
         fw.write(x + ",0\r\n")
     else :
-        print(counter)
+        try:
+            print(counter)
 
-        #get 50 data point from array
-        window = moving_average[counter - moving_size50 : counter]
+            #get 50 data point from array
+            window = moving_average[counter - moving_size50 : counter]
 
-        ma100 = ""
-        d = data[1].split("-")
-        data_date = date(int(d[0]),int(d[1]),int(d[2]))
-        #if data come from 2009 onward, will change to MA(100)
-        #if use the same previous  column (MA50), will make people confuse,
-        #add new column called MA100 is better
-        if data_date > date(2008, 12, 31) :
-            if counter < moving_size100 :
-                ma100 = ",0"
-            else :
-                window100 = moving_average[counter - moving_size100 : counter]
-                ma100 = "," + str(round(sum(window100)/moving_size100,2))
+            ma100 = ""
+            d = data[1].split("-")
+            data_date = date(int(d[0]),int(d[1]),int(d[2]))
+            #if data come from 2009 onward, will change to MA(100)
+            #if use the same previous  column (MA50), will make people confuse,
+            #add new column called MA100 is better
+            if data_date > date(2008, 12, 31) :
+                if counter < moving_size100 :
+                    ma100 = ",0"
+                else :
+                    window100 = moving_average[counter - moving_size100 : counter]
+                    ma100 = "," + str(round(sum(window100)/moving_size100,2))
 
-        fw.write(x + "," + str(round(sum(window)/moving_size50,2)) + ma100 + "\r\n")
-        print(window)
-        print(sum(window)/moving_size50)
-        print("============")
+            fw.write(x + "," + str(round(sum(window)/moving_size50,2)) + ma100 + "\r\n")
+            print(window)
+            print(sum(window)/moving_size50)
+            print("============")
 
-        fw.close()
+            fw.close()
+
+        except:
+            error_log = open("../dataset/errorlog.csv","a")
+            error_log.write("data error => " + x)
+            error_log.close()
+
         counter=counter+1
